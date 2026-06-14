@@ -29,16 +29,7 @@ sudo containerlab deploy -t topologia.yml --reconfigure
 # Instalação: Mosquitto, o Python, biblioteca do MQTT, iptables e tc(emulação wifi)
 ./setup.sh
 ```
-```
-# 1. Garantir que o diretório de pins antigo seja limpo
-sudo docker exec -it clab-lab-ebpf-gateway rm -f /sys/fs/bpf/xdp_monitor_test
 
-# 2. Carregar e pinar o programa de novo
-sudo docker exec -it clab-lab-ebpf-gateway bpftool prog load /lab/xdp_monitor.o /sys/fs/bpf/xdp_monitor_test type xdp
-
-# 3. Anexar o filtro à interface eth1
-sudo docker exec -it clab-lab-ebpf-gateway ip link set dev eth1 xdpgeneric pinned /sys/fs/bpf/xdp_monitor_test
-```
 --- 
 ### Passo 1: Dashboard de Observação
 
