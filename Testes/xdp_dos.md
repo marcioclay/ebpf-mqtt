@@ -62,6 +62,11 @@ Neste cenário, utilizamos o Firewall nativo do Linux como Sistema de Prevençã
    Certifique-se de que o XDP está desligado e aplique as regras de mitigação do iptables:
 
    ```
+   sudo docker exec -it clab-lab-ebpf-gateway apt-get update
+   sudo docker exec -it clab-lab-ebpf-gateway apt-get install -y iptables
+   ```
+
+   ```
    # Desligar o eBPF/XDP da interface (se estiver ativo)
    sudo docker exec -it clab-lab-ebpf-gateway ip link set dev eth1 xdpgeneric off
    
