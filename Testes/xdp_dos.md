@@ -18,7 +18,7 @@ Este guia orienta a validação do protótipo através do estabelecimento de tr�
     * *Descrição:* Volume total de tráfego de dados por unidade de tempo.
     * *Aplicação:* Análise de esgotamento do link de comunicação do gateway.
 
-### Índice de Testes
+### Deploy do laboratório
 
 Ao reiniciar o laboratório o Kernel do Linux é completamente zerado, isto significa que os contêineres foram parados e o programa eBPF foi apagado da memória. Caso esse seja o caso, siga essa etapas: 
 
@@ -40,33 +40,32 @@ sudo docker exec -it clab-lab-ebpf-gateway bpftool prog load /lab/xdp_monitor.o 
 sudo docker exec -it clab-lab-ebpf-gateway ip link set dev eth1 xdpgeneric pinned /sys/fs/bpf/xdp_monitor_test
 ```
 --- 
-1. Preparação :
-
 ### Passo 1: Dashboard de Observação
 
 ```
-# Terminal A - Iniciar dashboard - 
+# Terminal A - Iniciar dashboard e mantenha ligado durante todo laboratório.
 docker exec -it clab-lab-ebpf-gateway python3 /lab/src/dashboard.py
 ```
 
 Comprova que os mecanismos de defesa não estão causando falsos positivos.
+Enquanto sensor legítimo envia pacotes não há alteração significativa de PPS, Banda ou CPU.
 
 ```
 # Terminal B - Gera trafego legítimo MQTT no gateway
 sudo docker exec -it clab-lab-ebpf-sensor python3 /src/sensor.py
 ```
 
-2. Cenário A: Teste de Defesa com iptables
+### Passo 2: Observação com iptables
 Neste cenário, utilizamos o Firewall nativo do Linux como Sistema de Prevenção de Intrusões (IPS) contra um ataque de Flood UDP.
 
    2.1. Preparar o Gateway
    Certifique-se de que o XDP está desligado e aplique as regras de mitigação do iptables:
 
    ```
-   # 1. Desligar o eBPF/XDP da interface (se estiver ativo)
+   # Desligar o eBPF/XDP da interface (se estiver ativo)
    sudo docker exec -it clab-lab-ebpf-gateway ip link set dev eth1 xdpgeneric off
    
-   # 2. Aplicar o script de regras do iptables 
+   # Aplicar o script de regras do iptables - só aceita 10 pacotes UDP por segundo
    sudo docker exec -it clab-lab-ebpf-gateway /lab/regras_iptables.sh
    ``` 
 
@@ -78,7 +77,7 @@ Neste cenário, utilizamos o Firewall nativo do Linux como Sistema de Prevençã
    ```
    
    2.3. Observação e Coleta de Métricas Iptables
-   Para observar o tráfego anômalo a ser mitigado e o impacto arquitetural no kernel, execute:
+   Para observar o tráfego anômalo, execute:
    
    A. Medir o impacto na CPU e SoftIRQ (si):
    
@@ -95,16 +94,16 @@ Neste cenário, utilizamos o Firewall nativo do Linux como Sistema de Prevençã
    
    ---
 
-   3. Cenário B: Teste de Defesa com eBPF / XDP
-   Neste cenário, substituímos o iptables pelo código eBPF acoplado no driver de rede (XDP) mapas.
+   ### Passo 3: Observação com eBPF / XDP
+   Substituir o iptables pelo código eBPF .
    
    3.1. Preparar o Gateway
    ```
-   # 1. Zerar iptables 
+   #  Zerar iptables 
    sudo docker exec -it clab-lab-ebpf-gateway iptables -F
    ```
    ```
-   # 2. Carregar e anexar o XDP na interface eth1 (foi desativado no Cenario A)
+   #  Carregar e anexar o XDP na interface eth1 (foi desativado no item 2.1)
    sudo docker exec -it clab-lab-ebpf-gateway ip link set dev eth1 xdpgeneric pinned /sys/fs/bpf/xdp_monitor_test
    ```
    
@@ -140,6 +139,28 @@ Neste cenário, utilizamos o Firewall nativo do Linux como Sistema de Prevençã
    # monitoramento que traduz os mapas BPF em tempo real
    sudo docker exec -it clab-lab-ebpf-gateway python3 /lab/src/dashboard.py
    ```
+---
+# analisar antes
+
+1. No Contentor do Sensor (Simular sinal Wi-Fi com perdas e latência)
+Para simular que o sensor está numa rede Wi-Fi com uma latência média de 30ms, uma variação de ±5ms (jitter) e uma perda aleatória de 1% dos pacotes:
+
+```
+sudo docker exec -it clab-lab-ebpf-sensor tc qdisc add dev eth1 root netem delay 30ms 5ms loss 1%
+```
+2. No Contentor do Atacante (Simular um atacante com ligação Wi-Fi instável)
+Se quiser simular que o atacante está mais distante do ponto de acesso, enfrentando maior perda de pacotes (ex: 5%) e maior latência (ex: 50ms):
+
+```
+sudo docker exec -it clab-lab-ebpf-atacante tc qdisc add dev eth1 root netem delay 50ms 15ms loss 5%
+```
+3. Como remover a emulação (Voltar ao estado original de cabo perfeito)
+Após concluir os testes, pode remover as restrições a qualquer momento limpando a fila (qdisc) da interface:
+
+```
+sudo docker exec -it clab-lab-ebpf-sensor tc qdisc del dev eth1 root
+sudo docker exec -it clab-lab-ebpf-atacante tc qdisc del dev eth1 root
+```
 
 
 
