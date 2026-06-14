@@ -26,6 +26,10 @@ Ao reiniciar o laboratório o Kernel do Linux é completamente zerado, isto sign
 sudo containerlab deploy -t topologia.yml --reconfigure
 ```
 ```
+# Permissão ao script
+chmod +x setup.sh
+```
+```
 # Instalação: Mosquitto, o Python, biblioteca do MQTT, iptables e tc(emulação wifi)
 ./setup.sh
 ```
