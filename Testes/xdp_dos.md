@@ -59,87 +59,87 @@ sudo docker exec -it clab-lab-ebpf-sensor python3 /src/sensor.py
 2. Cenário A: Teste de Defesa com iptables
 Neste cenário, utilizamos o Firewall nativo do Linux como Sistema de Prevenção de Intrusões (IPS) contra um ataque de Flood UDP.
 
-2.1. Preparar o Gateway
-Certifique-se de que o XDP está desligado e aplique as regras de mitigação do iptables:
+   2.1. Preparar o Gateway
+   Certifique-se de que o XDP está desligado e aplique as regras de mitigação do iptables:
 
-```
-# 1. Desligar o eBPF/XDP da interface (se estiver ativo)
-sudo docker exec -it clab-lab-ebpf-gateway ip link set dev eth1 xdpgeneric off
+   ```
+   # 1. Desligar o eBPF/XDP da interface (se estiver ativo)
+   sudo docker exec -it clab-lab-ebpf-gateway ip link set dev eth1 xdpgeneric off
+   
+   # 2. Aplicar o script de regras do iptables 
+   sudo docker exec -it clab-lab-ebpf-gateway /lab/regras_iptables.sh
+   ``` 
 
-# 2. Aplicar o script de regras do iptables 
-sudo docker exec -it clab-lab-ebpf-gateway /lab/regras_iptables.sh
-``` 
+   2.2. Iniciar o Ataque 
+   
+   ```
+   # Terminal C: Flood UDP utilizando hping3
+   docker exec -it clab-lab-ebpf-attacker hping3 --flood --udp 10.0.0.1
+   ```
+   
+   2.3. Observação e Coleta de Métricas Iptables
+   Para observar o tráfego anômalo a ser mitigado e o impacto arquitetural no kernel, execute:
+   
+   A. Medir o impacto na CPU e SoftIRQ (si):
+   
+   ```
+   # Extrai o uso de processamento de rede (SoftIRQ) devido ao iptables
+   sudo docker exec -it clab-lab-ebpf-gateway top -b -n 10 -d 1 | grep "%Cpu" > /lab/cpu_iptables_ddos.txt
+   ```
+   B. Verificar a contagem de pacotes bloqueados (Anômalos):
+   
+   ```
+   # Lê os contadores das regras de DROP na chain INPUT
+   sudo docker exec -it clab-lab-ebpf-gateway iptables -L INPUT -n -v
+   ```
+   
+   ---
 
-2.2. Iniciar o Ataque 
-
-```
-# Terminal C: Flood UDP utilizando hping3
-docker exec -it clab-lab-ebpf-attacker hping3 --flood --udp 10.0.0.1
-```
-
-2.3. Observação e Coleta de Métricas Iptables
-Para observar o tráfego anômalo a ser mitigado e o impacto arquitetural no kernel, execute:
-
-A. Medir o impacto na CPU e SoftIRQ (si):
-
-```
-# Extrai o uso de processamento de rede (SoftIRQ) devido ao iptables
-sudo docker exec -it clab-lab-ebpf-gateway top -b -n 10 -d 1 | grep "%Cpu" > /lab/cpu_iptables_ddos.txt
-```
-B. Verificar a contagem de pacotes bloqueados (Anômalos):
-
-```
-# Lê os contadores das regras de DROP na chain INPUT
-sudo docker exec -it clab-lab-ebpf-gateway iptables -L INPUT -n -v
-```
-
----
-
-3. Cenário B: Teste de Defesa com eBPF / XDP
-Neste cenário, substituímos o iptables pelo código eBPF acoplado no driver de rede (XDP) mapas.
-
-3.1. Preparar o Gateway
-```
-# 1. Zerar iptables 
-sudo docker exec -it clab-lab-ebpf-gateway iptables -F
-```
-```
-# 2. Carregar e anexar o XDP na interface eth1 (foi desativado no Cenario A)
-sudo docker exec -it clab-lab-ebpf-gateway ip link set dev eth1 xdpgeneric pinned /sys/fs/bpf/xdp_monitor_test
-```
-
-3.2. Iniciar o Ataque
-
-```
-# Terminal C: Flood UDP utilizando hping3
-docker exec -it clab-lab-ebpf-attacker hping3 --flood --udp 10.0.0.1
-```
-
-3.3. Observação e Coleta de Métricas 
-
-A. Medir o impacto na CPU (Prova de Eficiência):
-
-```
-# O valor de "si" (SoftIRQ) deve ser marginal comparado ao teste com iptables
-sudo docker exec -it clab-lab-ebpf-gateway top -b -n 10 -d 1 | grep "%Cpu" > /lab/cpu_xdp_ddos.txt
-```
-
-B. Observar os dados extraídos pelo XDP (Leitura Nativa dos Mapas):
-
-```
-# Ver a Volumetria Global (DDoS UDP vs Tráfego TCP na porta 1883)
-sudo docker exec -it clab-lab-ebpf-gateway bpftool map dump name proto_stats
-```
-```
-sudo docker exec -it clab-lab-ebpf-gateway bpftool map dump name tcp_sessions
-```
-
-C. Visualizar via Dashboard :
-
-```
-# monitoramento que traduz os mapas BPF em tempo real
-sudo docker exec -it clab-lab-ebpf-gateway python3 /lab/src/dashboard.py
-```
+   3. Cenário B: Teste de Defesa com eBPF / XDP
+   Neste cenário, substituímos o iptables pelo código eBPF acoplado no driver de rede (XDP) mapas.
+   
+   3.1. Preparar o Gateway
+   ```
+   # 1. Zerar iptables 
+   sudo docker exec -it clab-lab-ebpf-gateway iptables -F
+   ```
+   ```
+   # 2. Carregar e anexar o XDP na interface eth1 (foi desativado no Cenario A)
+   sudo docker exec -it clab-lab-ebpf-gateway ip link set dev eth1 xdpgeneric pinned /sys/fs/bpf/xdp_monitor_test
+   ```
+   
+   3.2. Iniciar o Ataque
+   
+   ```
+   # Terminal C: Flood UDP utilizando hping3
+   docker exec -it clab-lab-ebpf-attacker hping3 --flood --udp 10.0.0.1
+   ```
+   
+   3.3. Observação e Coleta de Métricas 
+   
+   A. Medir o impacto na CPU (Prova de Eficiência):
+   
+   ```
+   # O valor de "si" (SoftIRQ) deve ser marginal comparado ao teste com iptables
+   sudo docker exec -it clab-lab-ebpf-gateway top -b -n 10 -d 1 | grep "%Cpu" > /lab/cpu_xdp_ddos.txt
+   ```
+   
+   B. Observar os dados extraídos pelo XDP (Leitura Nativa dos Mapas):
+   
+   ```
+   # Ver a Volumetria Global (DDoS UDP vs Tráfego TCP na porta 1883)
+   sudo docker exec -it clab-lab-ebpf-gateway bpftool map dump name proto_stats
+   ```
+   ```
+   sudo docker exec -it clab-lab-ebpf-gateway bpftool map dump name tcp_sessions
+   ```
+   
+   C. Visualizar via Dashboard :
+   
+   ```
+   # monitoramento que traduz os mapas BPF em tempo real
+   sudo docker exec -it clab-lab-ebpf-gateway python3 /lab/src/dashboard.py
+   ```
 
 
 
