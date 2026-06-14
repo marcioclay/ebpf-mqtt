@@ -116,7 +116,7 @@ Neste cenário, utilizamos o Firewall nativo do Linux como Sistema de Prevençã
    
    ```
    # Terminal C: Flood UDP utilizando hping3
-   docker exec -it clab-lab-ebpf-attacker hping3 --flood --udp 10.0.0.1
+   docker exec -it clab-lab-ebpf-atacante hping3 --flood --udp 10.0.0.1
    ```
    
    3.3. Observação e Coleta de Métricas 
