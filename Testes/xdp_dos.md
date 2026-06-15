@@ -66,30 +66,24 @@ Neste cenário, utilizamos o Firewall nativo do Linux como Sistema de Prevençã
 
    2.2. Iniciar o Ataque 
    
-   ```
-   # Terminal C: Flood UDP utilizando hping3
-   docker exec -it clab-lab-ebpf-atacante hping3 --flood --udp 10.0.0.1
-   ```
-   
-   2.3. Observação e Coleta de Métricas Iptables
-   Para observar o tráfego anômalo, execute:
-   
-   A. Medir o impacto na CPU e SoftIRQ (si):
+   O ataque deve ser feito em dois ou mais terminais, o ataque será Dos volumetrico com falsificação de ip com nó único.
    
    ```
-   # Extrai o uso de processamento de rede (SoftIRQ) devido ao iptables
-   sudo docker exec -it clab-lab-ebpf-gateway top -b -n 10 -d 1 | grep "%Cpu" > /lab/cpu_iptables_ddos.txt
-   ```
-   B. Verificar a contagem de pacotes bloqueados (Anômalos):
-   
-   ```
-   # Lê os contadores das regras de DROP na chain INPUT
-   sudo docker exec -it clab-lab-ebpf-gateway iptables -L INPUT -n -v
+   # Terminal C e D: Flood UDP utilizando hping3 - simula ip spoofing
+   sudo docker exec -it clab-lab-ebpf-atacante hping3 --flood --rand-source --udp -d 120 -p 1883 10.0.0.1
    ```
    
    ---
 
    ### Passo 3: Observação com eBPF / XDP
+
+   Fechar e reiniciar o dashboard para novo teste.
+
+   ```
+   # Terminal A - Iniciar dashboard e mantenha ligado durante todo laboratório.
+   docker exec -it clab-lab-ebpf-gateway python3 /lab/src/dashboard.py
+   ```
+   
    Substituir o iptables pelo código eBPF .
    
    3.1. Preparar o Gateway
@@ -98,64 +92,23 @@ Neste cenário, utilizamos o Firewall nativo do Linux como Sistema de Prevençã
    sudo docker exec -it clab-lab-ebpf-gateway iptables -F
    ```
    ```
-   #  Carregar e anexar o XDP na interface eth1 (foi desativado no item 2.1)
-   sudo docker exec -it clab-lab-ebpf-gateway ip link set dev eth1 xdpgeneric pinned /sys/fs/bpf/xdp_monitor_test
+   #  Dar permissão de acesso ao script xdp
+    chmod +x setup_xdp.sh
+   ```
+   ```
+      # Carregar e anexar o XDP na interface eth1 (foi desativado no item 2.1)
+      ./setup_xdp.sh
    ```
    
    3.2. Iniciar o Ataque
    
    ```
-   # Terminal C: Flood UDP utilizando hping3
-   docker exec -it clab-lab-ebpf-atacante hping3 --flood --udp 10.0.0.1
+   # Terminal C e D: Flood UDP utilizando hping3 - simula ip spoofing
+   sudo docker exec -it clab-lab-ebpf-atacante hping3 --flood --rand-source --udp -d 120 -p 1883 10.0.0.1
    ```
    
-   3.3. Observação e Coleta de Métricas 
-   
-   A. Medir o impacto na CPU (Prova de Eficiência):
-   
-   ```
-   # O valor de "si" (SoftIRQ) deve ser marginal comparado ao teste com iptables
-   sudo docker exec -it clab-lab-ebpf-gateway top -b -n 10 -d 1 | grep "%Cpu" > /lab/cpu_xdp_ddos.txt
-   ```
-   
-   B. Observar os dados extraídos pelo XDP (Leitura Nativa dos Mapas):
-   
-   ```
-   # Ver a Volumetria Global (DDoS UDP vs Tráfego TCP na porta 1883)
-   sudo docker exec -it clab-lab-ebpf-gateway bpftool map dump name proto_stats
-   ```
-   ```
-   sudo docker exec -it clab-lab-ebpf-gateway bpftool map dump name tcp_sessions
-   ```
-   
-   C. Visualizar via Dashboard :
-   
-   ```
-   # monitoramento que traduz os mapas BPF em tempo real
-   sudo docker exec -it clab-lab-ebpf-gateway python3 /lab/src/dashboard.py
-   ```
----
-# analisar antes
-
-1. No Contentor do Sensor (Simular sinal Wi-Fi com perdas e latência)
-Para simular que o sensor está numa rede Wi-Fi com uma latência média de 30ms, uma variação de ±5ms (jitter) e uma perda aleatória de 1% dos pacotes:
-
-```
-sudo docker exec -it clab-lab-ebpf-sensor tc qdisc add dev eth1 root netem delay 30ms 5ms loss 1%
-```
-2. No Contentor do Atacante (Simular um atacante com ligação Wi-Fi instável)
-Se quiser simular que o atacante está mais distante do ponto de acesso, enfrentando maior perda de pacotes (ex: 5%) e maior latência (ex: 50ms):
-
-```
-sudo docker exec -it clab-lab-ebpf-atacante tc qdisc add dev eth1 root netem delay 50ms 15ms loss 5%
-```
-3. Como remover a emulação (Voltar ao estado original de cabo perfeito)
-Após concluir os testes, pode remover as restrições a qualquer momento limpando a fila (qdisc) da interface:
-
-```
-sudo docker exec -it clab-lab-ebpf-sensor tc qdisc del dev eth1 root
-sudo docker exec -it clab-lab-ebpf-atacante tc qdisc del dev eth1 root
-```
+     
+  
 
 
 
