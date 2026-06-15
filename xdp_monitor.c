@@ -6,9 +6,9 @@
 
 #define TARGET_PORT 1883 
 
-// Limiares para a Heurística do Slow DoS
+// Slow DoS
 #define MIN_PKTS_CHECK 50
-// Tamanho médio mínimo aceitável do pacote (Headers: Eth 14 + IP 20 + TCP 20 = 54 bytes).
+// Tamanho médio do pacote (Headers: Eth 14 + IP 20 + TCP 20 = 54 bytes).
 // Se a média for inferior a 65 bytes por pacote, significa que não há envio de dados reais.
 #define MIN_AVG_BYTES 65 
 
