@@ -17,6 +17,9 @@ Este guia orienta a validação do protótipo através do estabelecimento de tr�
 * **B. Consumo de Banda (Mbps / Gbps)**
     * *Descrição:* Volume total de tráfego de dados por unidade de tempo.
     * *Aplicação:* Análise de esgotamento do link de comunicação do gateway.
+* **C. Sobrecarga de Processamento (CPU SoftIRQ %)**
+    * *Descrição: Percentual de ciclos de processamento dedicados ao tratamento de interrupções de software (SoftIRQ), que lidam com o processamento de pacotes na stack de rede do kernel.
+    * *Aplicação: Análise da exaustão dos recursos computacionais do Gateway e medição do custo de processamento de pacotes ("overhead") para cada tecnologia de defesa.
 
 ### Deploy do laboratório
 
