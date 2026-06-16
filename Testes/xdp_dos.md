@@ -80,13 +80,7 @@ Neste cenário, utilizamos o Firewall nativo do Linux como Sistema de Prevençã
 
    ### Passo 3: Observação com eBPF / XDP
 
-   Fechar e reiniciar o dashboard para novo teste.
-
-   ```
-   # Terminal A - Iniciar dashboard e mantenha ligado durante todo laboratório.
-   docker exec -it clab-lab-ebpf-gateway python3 /lab/src/dashboard.py
-   ```
-   
+  
    Substituir o iptables pelo código eBPF .
    
    3.1. Preparar o Gateway
